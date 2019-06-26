@@ -2,6 +2,10 @@
   (:use :cl)
   (:lock t)
   (:export
+    ;; SPAREPARTS.LISP
+    :keycase
+    :initialize-struct
+    
     ;; SPRITE.LISP
     :pixmap-descriptor-id
     :pixmap-width
@@ -10,9 +14,11 @@
     :get-pixmap
     :verify-images-existence
     :verify-images-same-dimensions
+    :get-pixmaps-array
     :defanimation
     :restart-animation
     :defcharmap
+    :get-charmap
     :get-charmap-pixmap
     :charmap-translate-to-pixmap
     :make-translator-iterator
@@ -21,9 +27,16 @@
     :get-iterator-pixmap
     :get-current-iterator-key
     :set-current-iterator-key
+    :paint-sprite
+    :paint-descriptor
     
+    :sprite-descriptor
     :make-sprite
     :initialize-sprite
+    :sprite-x
+    :sprite-y
+    :sprite-absolute-right
+    :sprite-absolute-bottom
     :change-sprite-position
     :change-sprite-velocity
     :change-sprite-acceleration
@@ -31,10 +44,14 @@
     :stop-sprite
     
     :paint-descriptor
+    
+    :destroy-textures
+    
     ;; WINDOW.LISP
     :window
-    :window-active
-    :window-id
+    :get-root-widget
+    :get-window-id
+    :get-active-status
     :*WINDOW-WIDTH*
     :*WINDOW-HEIGHT*
     :activate
@@ -48,6 +65,7 @@
     :close-window-group
     :search-stack-xy
     :defwindow
+    
     ;; WIDGET.LISP
     :color
     :color-r
@@ -66,8 +84,6 @@
     :add-adjust-accordingly
     :search-widget-by-type
     :search-widget-by-local-id
-    :keycase
-    :initialize-struct
     
     :widget
     :widget-children
@@ -114,6 +130,8 @@
     :widget-event-mouse-click-cancel
     :widget-event-mouse-click
     
+    :widget-propagate-onkey-down
+    :widget-propagate-onkey-up
     :widget-propagate-onkey
     :widget-propagate-calculate-xy
     :widget-propagate-calculate-xy-children
@@ -128,7 +146,8 @@
     :find-widget
 
     :make-image
-    :switch-image-visability
+    :image-widget-visible
+    :switch-image-visibility
     
     :make-background
     
@@ -140,4 +159,6 @@
     :make-menu-option
     ;; MOUSE.LISP
     
+    ;; GLAS.LISP
+    :glas-go
     ))

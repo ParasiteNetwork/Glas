@@ -10,8 +10,9 @@
 
 :components
 ((:file "package")
- (:file "glas")
+ (:file "spareparts")
  (:file "sprite")
  (:file "window")
  (:file "widget")
- (:file "mouse")))
+ (:file "mouse")
+ (:file "glas")))

@@ -2,6 +2,8 @@
 ;; Copyright Parasite Network 2018
 ;; GPL3
 
+(in-package :glas)
+
 ;; TODO
 ;; * If width or height is not set then calculate it from the first child, or 0,0.
 
@@ -123,32 +125,6 @@
                          (let ((result (search-widget-by-local-id child id)))
                            (when result
                              (return-from search-widget-by-local-id result))))))
-
-(defun key= (sdlkey symkey)
-  (sdl2:scancode= (sdl2:scancode-value sdlkey) symkey))
-
-(defmacro keycase (key &body body)
-  `(cond
-     ,@(let ((statements))
-         (dolist (clause body statements)
-           (setf statements 
-                 (append statements
-                         (if (eq (car clause) t)
-                             `((t ,@(cdr clause)))
-                             `(((key= ,key ,(car clause)) ,@(cdr clause) t)))))))))
-
-(defun initialize-struct (thestruct &rest args &key &allow-other-keys)
-  (let ((prefix (symbol-name (type-of thestruct))))
-    (loop for (key value) on args by #'cddr
-          do (let ((postfix (symbol-name key)))
-               (let ((accessor (intern (concatenate 'string prefix "-" postfix))))
-                 (handler-case
-                   (let ((writer (fdefinition (list 'setf accessor))))
-                     (funcall writer value thestruct))
-                   (undefined-function (e)
-                                       (format t "When initializing ~A~% ~A~%" thestruct e)
-                                       (error e))))))
-    thestruct))
 
 ;-------------------------------------------------------------------------
 
@@ -1010,6 +986,8 @@
           (error "MENU-WIDGET needs at least one MENU-OPTION-WIDGET."))
         (let ((menu (make-menu-widget
                       :id id
+                      :opaque t
+                      :opaque-draw-exception t
                       :width (+ (widget-width pointer) (widget-width bag))
                       :height (widget-height bag)
                       :pointer pointer

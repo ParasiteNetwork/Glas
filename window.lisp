@@ -2,6 +2,8 @@
 ;; Copyright Parasite Network 2018
 ;; GPL3
 
+(in-package :glas)
+
 (defstruct window
   "The WINDOW is the root container for all widgets."
   widget
@@ -15,6 +17,19 @@
   callback-close
   callback-input
   todo-paint-cache)
+
+;; Public accessors
+
+(defun get-root-widget (window)
+  (window-widget window))
+
+(defun get-window-id (window)
+  (window-id window))
+
+(defun get-active-status (window)
+  (window-active window))
+
+;; Globals
 
 (defparameter *WINDOWS* nil
   "Defined windows.")
@@ -43,9 +58,9 @@
 ; (INT, INT) -> NIL
 (defun glas-initialize-window-defaults (width height)
   (setf *WINDOWS* (make-hash-table :test #'eq))
-  (setf *WINDOW-PAINT-STACK* nil)
+  ;(setf *WINDOW-PAINT-STACK* nil)
   (setf *WINDOW-STACK* (make-array '(20) :adjustable t :fill-pointer 0))
-  (setf *WINDOW-INPUT-STACK* (make-array '(0)))
+  ;(setf *WINDOW-INPUT-STACK* (make-array '(0)))
   (setf *NAMED-WINDOWS* (make-hash-table :test #'eq))
   (setf *WINDOW-GROUPS* (make-hash-table :test #'eq))
   (setf *DEBUG-WIDGET-BORDER* nil)
@@ -239,7 +254,7 @@
 
 ;;------------------------------------------------------------------------------
 
-(defun initialize-windows ()
+(defun finalize-windows ()
   (map nil (lambda (window)
              (format t "Initializing window: ~A.~%" (window-id window))
              (let ((widget (window-widget window)))

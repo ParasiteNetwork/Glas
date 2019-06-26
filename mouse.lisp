@@ -2,6 +2,8 @@
 ;; Copyright Parasite Network 2018
 ;; GPL3
 
+(in-package :glas)
+
 (defparameter *MOUSE-MOVEMENT-TRACKER* nil)
 (defparameter *MOUSE-CLICK-VECTOR* nil)
 

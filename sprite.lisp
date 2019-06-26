@@ -2,6 +2,8 @@
 ;; Copyright Parasite Network 2018
 ;; GPL3
 
+(in-package :glas)
+
 (defstruct texture-descriptor 
   texture
   width
@@ -25,7 +27,7 @@
 (defparameter *TEXTURE-DESCRIPTORS* nil)
 (defparameter *PIXMAP-DESCRIPTORS* nil)
 
-(defun initialize-sprites ()
+(defun glas-initialize-sprites ()
   (setf *TEXTURE-DESCRIPTORS* (make-hash-table :test #'equal))
   (setf *PIXMAP-DESCRIPTORS* (make-hash-table :test 'eq)))
 
@@ -298,6 +300,12 @@
   cache)		; computed sprite-descripors
 
 (defparameter *charmaps* (make-hash-table :test 'eq))
+
+(defmethod pixmap-width ((charmap charmap-descriptor))
+  (charmap-descriptor-width charmap))
+
+(defmethod pixmap-height ((charmap charmap-descriptor))
+  (charmap-descriptor-height charmap))
 
 (defun get-charmap (id &key on-failure-nil)
   (let ((charmap (gethash id *charmaps*)))
