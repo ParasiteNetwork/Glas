@@ -649,7 +649,7 @@
 (defmethod widget-event-init ((widget background-widget) window)
   (setf (background-widget-rect widget) (self-rectangle widget)))
 
-(defmethod widget-event-paint ((widget background-widget) renderer tick)
+(defmethod widget-event-prepaint ((widget background-widget) renderer tick)
   (when (background-widget-color widget)
     (set-render-coloring renderer (background-widget-color widget))
     (sdl2:render-fill-rect renderer (background-widget-rect widget))))
