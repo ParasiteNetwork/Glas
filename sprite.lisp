@@ -250,7 +250,9 @@
   (copy-animated-pixmap-descriptor anixmap))
 
 ; TODO Accept charmap autoindex
-(defun defanimation (timeline pixmaps id)
+; TODO Add :LOOP :BOUNCE :STOP control values
+; TODO Add auto increment from last value in timeline
+(defun defanimation (timeline pixmaps id &key (control :loop))
   (let ((pixmap (make-animated-pixmap-descriptor
                   :timeline (make-array (list (length timeline)) :initial-contents timeline)
                   :pixmaps (get-pixmaps-array pixmaps)
