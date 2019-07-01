@@ -36,6 +36,8 @@
 (defun set-pixmap-descriptor (id descriptor)
   (when (get-pixmap-descriptor id)
     (error "Trying to set PIXMAP-DESCRIPTOR ~A when one is already set." id))
+  (unless (eq id (pixmap-descriptor-id descriptor))
+    (setf (pixmap-descriptor-id descriptor) id))
   (setf (gethash id *PIXMAP-DESCRIPTORS*) descriptor))
 
 (defun glas-initialize-sprites ()
