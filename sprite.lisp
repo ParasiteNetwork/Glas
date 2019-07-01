@@ -236,6 +236,12 @@
 
 ;;------------------------------------------------------------------------------
 
+(deftype pixmaptype ()
+  `(or (satisfies pixmap-descriptor-p)
+       (satisfies animated-pixmap-descriptor-p)))
+
+;;------------------------------------------------------------------------------
+
 ;; ANIMATE ONCE a,b,c,d
 ;; ANIMATE LOOP a,b,c,d
 ;; ANIMATE ONCE a,b LOOP c,d
@@ -628,6 +634,7 @@
                                  (jerk #(0 0)) 
                                  transform-x 
                                  transform-y)
+  (check-type pixmap pixmaptype)
   (initialize-struct object
                      :id id
                      :pixmap pixmap
