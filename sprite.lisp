@@ -27,6 +27,17 @@
 (defparameter *TEXTURE-DESCRIPTORS* nil)
 (defparameter *PIXMAP-DESCRIPTORS* nil)
 
+(defun get-pixmap-descriptor (id)
+  (let ((descriptor (gethash id *PIXMAP-DESCRIPTORS*)))
+    (unless descriptor
+      (error "Can't find PIXMAP-DESCRIPTOR for ~A." id))
+    descriptor))
+
+(defun set-pixmap-descriptor (id descriptor)
+  (when (get-pixmap-descriptor id)
+    (error "Trying to set PIXMAP-DESCRIPTOR ~A when one is already set." id))
+  (setf (gethash id *PIXMAP-DESCRIPTORS*) descriptor))
+
 (defun glas-initialize-sprites ()
   (setf *TEXTURE-DESCRIPTORS* (make-hash-table :test #'equal))
   (setf *PIXMAP-DESCRIPTORS* (make-hash-table :test 'eq)))
