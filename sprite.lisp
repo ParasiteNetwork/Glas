@@ -311,13 +311,14 @@
     (multiple-value-bind (timepoints names) (extract-timeline-components fixed-timeline)
                          (let* ((timepoints# (length timepoints))
                                 (pixmap (make-animated-pixmap-descriptor
+                                          :id id
                                           :timeline (make-array (list timepoints#) :initial-contents timepoints)
                                           :names names
                                           :pixmaps (get-pixmaps-array images)
                                           :base 0
                                           :index 0
                                           :total timepoints#)))
-                           (setf (gethash id *pixmap-descriptors*) pixmap)))))
+                           (set-pixmap-descriptor id pixmap)))))
 
 (defun get-animation-pixmap (anixmap tick)
   (with-slots ((timeline% timeline)
