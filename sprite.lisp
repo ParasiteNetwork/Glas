@@ -231,6 +231,7 @@
 
 (defstruct animated-pixmap-descriptor
   timeline
+  names
   pixmaps
   base
   index
@@ -249,17 +250,63 @@
 (defmethod copy-pixmap ((anixmap animated-pixmap-descriptor))
   (copy-animated-pixmap-descriptor anixmap))
 
+(defun adjust-timeline-description (timeline pixmaps)
+  "The timeline needs to be of the same length as the pixmap list.
+  If it too short we duplicate the last element, and if it is too
+  long we simply drop the last elements we don't need."
+  (let ((timeline# (length timeline))
+        (pixmaps# (length pixmaps)))
+    (cond
+      ((= timeline# pixmaps#)
+       timeline)
+      ((< timeline# pixmaps#)
+       (let ((diff (- pixmaps# timeline#)))
+         ;; Duplicate last timeline entry. DOES NOT COPY LISTS!
+         (append timeline (make-list diff :initial-element (car (last timeline))))))
+      ((> timeline# pixmaps#)
+       (let ((diff (- timeline# pixmaps#)))
+         ;; Drops the difference.
+         (butlast timeline diff))))))
+
+(defun coalesce-keyvalue (kvlist)
+  (let (db)
+    (dolist (kv kvlist db)
+      (destructuring-bind (key value) kv
+                          (let ((entry (assoc key db)))
+                            (if entry
+                                (push (append entry (list value)) db)
+                                (push (list key value) db)))))))
+
+(defun extract-timeline-components (timeline)
+  (let (timepoints names)
+    (loop for component in timeline
+          for i from 0
+          do (if (listp component)
+                 (destructuring-bind (timepoint name) component
+                                     (push timepoint timepoints)
+                                     (push (list name i) names))
+                 (push component timepoints)))
+    (values (reverse timepoints) 
+            (coalesce-keyvalue names))))
+
 ; TODO Accept charmap autoindex
 ; TODO Add :LOOP :BOUNCE :STOP control values
-; TODO Add auto increment from last value in timeline
-(defun defanimation (timeline pixmaps id &key (control :loop))
-  (let ((pixmap (make-animated-pixmap-descriptor
-                  :timeline (make-array (list (length timeline)) :initial-contents timeline)
-                  :pixmaps (get-pixmaps-array pixmaps)
-                  :base 0
-                  :index 0
-                  :total (length timeline))))
-    (setf (gethash id *pixmap-descriptors*) pixmap))) 
+(defun defanimation (timeline images id &key (control :loop))
+  (unless (plusp (length timeline))
+    (error "The animation (~A) needs at least one timepoint." id))
+  (unless (plusp (length images))
+    (error "The animation (~A) needs at least one image." id))
+  (let ((fixed-timeline (adjust-timeline-description timeline images)))
+    (multiple-value-bind (timepoints names) (extract-timeline-components fixed-timeline)
+                         (let* ((timepoints# (length timepoints))
+                                (pixmap (make-animated-pixmap-descriptor
+                                          :timeline (make-array (list timepoints#) :initial-contents timepoints)
+                                          :names names
+                                          :pixmaps (get-pixmaps-array images)
+                                          :base 0
+                                          :index 0
+                                          :total timepoints#)))
+                           (setf (gethash id *pixmap-descriptors*) pixmap)))))
 
 (defun get-animation-pixmap (anixmap tick)
   (with-slots ((timeline% timeline)
