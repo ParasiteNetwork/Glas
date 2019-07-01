@@ -322,6 +322,17 @@
                                           :total timepoints#)))
                            (set-pixmap-descriptor id pixmap)))))
 
+(defun update-animation-frame-timepoint (animation name timepoint)
+  (with-slots ((names% names)
+               (timeline% timeline)) animation
+              (let ((entry (assoc name names%)))
+                (if entry
+                    (dolist (index (cdr entry))
+                      (setf (aref timeline% index) timepoint))
+                    (format t "WARNING: Animation (~A) does not have a frame named (~A).~%"
+                            (pixmap-descriptor-id animation)
+                            name)))))
+
 (defun get-animation-pixmap (anixmap tick)
   (with-slots ((timeline% timeline)
                (pixmaps% pixmaps)
