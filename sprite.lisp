@@ -660,7 +660,10 @@
                                              0))
                      :transform-x transform-x
                      :transform-y transform-y))
-    
+
+(defun get-sprite-pixmap (sprite)
+  (sprite-descriptor-pixmap sprite))
+
 (defun change-sprite-position (sprite px py)
   (let ((pos (sprite-descriptor-pos sprite)))
     (setf (sprite-descriptor-pos sprite)

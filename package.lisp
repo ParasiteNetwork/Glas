@@ -7,6 +7,7 @@
     :initialize-struct
     
     ;; SPRITE.LISP
+    :pixmaptype
     :pixmap-descriptor-id
     :pixmap-width
     :pixmap-height
@@ -32,6 +33,7 @@
     
     :sprite-descriptor
     :make-sprite
+    :get-sprite-pixmap
     :initialize-sprite
     :sprite-x
     :sprite-y
