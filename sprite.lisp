@@ -27,14 +27,15 @@
 (defparameter *TEXTURE-DESCRIPTORS* nil)
 (defparameter *PIXMAP-DESCRIPTORS* nil)
 
-(defun get-pixmap-descriptor (id)
+(defun get-pixmap-descriptor (id &key on-failure-nil)
   (let ((descriptor (gethash id *PIXMAP-DESCRIPTORS*)))
-    (unless descriptor
-      (error "Can't find PIXMAP-DESCRIPTOR for ~A." id))
-    descriptor))
+    (if descriptor
+        descriptor
+        (unless on-failure-nil
+          (error "Can't find PIXMAP-DESCRIPTOR for ~A." id)))))
 
 (defun set-pixmap-descriptor (id descriptor)
-  (when (get-pixmap-descriptor id)
+  (when (get-pixmap-descriptor id :on-failure-nil t)
     (error "Trying to set PIXMAP-DESCRIPTOR ~A when one is already set." id))
   (setf (gethash id *PIXMAP-DESCRIPTORS*) descriptor))
 
