@@ -36,8 +36,6 @@
 (defun set-pixmap-descriptor (id descriptor)
   (when (get-pixmap-descriptor id)
     (error "Trying to set PIXMAP-DESCRIPTOR ~A when one is already set." id))
-  (unless (eq id (pixmap-descriptor-id descriptor))
-    (setf (pixmap-descriptor-id descriptor) id))
   (setf (gethash id *PIXMAP-DESCRIPTORS*) descriptor))
 
 (defun glas-initialize-sprites ()
@@ -313,7 +311,6 @@
     (multiple-value-bind (timepoints names) (extract-timeline-components fixed-timeline)
                          (let* ((timepoints# (length timepoints))
                                 (pixmap (make-animated-pixmap-descriptor
-                                          :id id
                                           :timeline (make-array (list timepoints#) :initial-contents timepoints)
                                           :names names
                                           :pixmaps (get-pixmaps-array images)
