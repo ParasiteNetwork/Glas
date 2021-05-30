@@ -4,6 +4,23 @@
 
 (in-package :glas)
 
+
+(defparameter *RECTS* 0)
+
+(defun make-rect (x y width height)
+  (incf *RECTS* 1)
+  (sdl2:make-rect
+    x
+    y
+    width
+    height))
+
+(defun free-rect (rect)
+  (decf *RECTS* 1)
+  (sdl2:free-rect rect))
+
+;;----------------------------------------------------------------------
+
 (defstruct texture-descriptor 
   texture
   width
@@ -64,7 +81,48 @@
 
 ;;------------------------------------------------------------------------------
 
-(defstruct pixmap-descriptor
+(defstruct xy-transformer
+  (active nil)
+  start ; tick
+  callback) ; (x y start tick diff) -> (nx ny final)
+
+
+(defgeneric attach-xy-transformer  (transformer callback))
+(defmethod attach-xy-transformer (transformer callback)
+  nil)
+(defmethod attach-xy-transformer ((transformer xy-transformer) callback)
+  (setf (xy-transformer-active transformer) t)
+  (setf (xy-transformer-start transformer) 0)
+  (setf (xy-transformer-callback transformer) callback))
+
+(defgeneric has-xy-transformer-p (transformer))
+(defmethod has-xy-transformer-p (transformer)
+  nil)
+(defmethod has-xy-transformer-p ((transformer xy-transformer))
+  (xy-transformer-active transformer))
+
+(defun remove-xy-transformer (transformer)
+  (setf (xy-transformer-active transformer) nil))
+
+(defun call-xy-transformer (transformer x y tick)
+  (if (not (xy-transformer-active transformer))
+      (values x y)
+      (let ((start (xy-transformer-start transformer))
+            (callback (xy-transformer-callback transformer)))
+        (when (= start 0)
+          (setf (xy-transformer-start transformer) tick)
+          (setf start tick))
+        (let ((diff (- tick start)))
+          (multiple-value-bind (nx ny final) (funcall callback x y start diff tick)
+                               (if final
+                                   (progn
+                                     (remove-xy-transformer transformer)
+                                     (values x y))
+                                   (values nx ny)))))))
+
+;;------------------------------------------------------------------------------
+
+(defstruct (pixmap-descriptor (:include xy-transformer))
   "A pixmap descriptor describes a region in a texture."
   id 			; self id
   texture		; the texture-descriptor
@@ -75,15 +133,19 @@
   absolute-x  ; absolute x within the texture
   absolute-y  ; absolute y within the texture
   rectangle)	; precomputed sdl rectangle
-
+  
 (defgeneric pixmap-width (pixmap))
 (defgeneric pixmap-height (pixmap))
+(defgeneric pixmap-id (pixmap))
 
 (defmethod pixmap-width ((pixmap pixmap-descriptor))
   (pixmap-descriptor-width pixmap))
 
 (defmethod pixmap-height ((pixmap pixmap-descriptor))
   (pixmap-descriptor-height pixmap))
+
+(defmethod pixmap-id ((pixmap pixmap-descriptor))
+  (pixmap-descriptor-id pixmap))
 
 (defun create-pixmap-descriptor (texture id &optional width height x y)
   "By default the pixmap will cover the entire texture.
@@ -108,7 +170,7 @@
       :absolute-x absx
       :absolute-y absy
       :rectangle 
-      (sdl2:make-rect
+      (make-rect
         absx
         absy
         width
@@ -238,7 +300,7 @@
 
 (deftype pixmaptype ()
   `(or (satisfies pixmap-descriptor-p)
-       (satisfies animated-pixmap-descriptor-p)))
+       (satisfies animation-descriptor-p)))
 
 ;;------------------------------------------------------------------------------
 
@@ -247,7 +309,8 @@
 ;; ANIMATE ONCE a,b LOOP c,d
 ;; ANIMATE a:50,b:100,c:50,d:100 LOOP e:20,f:20
 
-(defstruct animated-pixmap-descriptor
+(defstruct (animation-descriptor (:include xy-transformer))
+  id
   timeline
   names
   pixmaps
@@ -255,18 +318,24 @@
   index
   total)
 
-(defmethod pixmap-width ((anixmap animated-pixmap-descriptor))
+(defmethod pixmap-width ((anixmap animation-descriptor))
   (with-slots ((pixmaps% pixmaps)
                (index% index)) anixmap
               (pixmap-width (aref pixmaps% index%))))
 
-(defmethod pixmap-height ((anixmap animated-pixmap-descriptor))
+(defmethod pixmap-height ((anixmap animation-descriptor))
   (with-slots ((pixmaps% pixmaps)
                (index% index)) anixmap
               (pixmap-height (aref pixmaps% index%))))
 
-(defmethod copy-pixmap ((anixmap animated-pixmap-descriptor))
-  (copy-animated-pixmap-descriptor anixmap))
+(defmethod pixmap-id ((anixmap animation-descriptor))
+  (animation-descriptor-id anixmap))
+
+(defmethod copy-pixmap ((anixmap animation-descriptor))
+  (let ((copy (copy-animation-descriptor anixmap)))
+    (setf (animation-descriptor-timeline copy)
+          (copy-seq (animation-descriptor-timeline anixmap)))
+    copy))
 
 (defun adjust-timeline-description (timeline pixmaps)
   "The timeline needs to be of the same length as the pixmap list.
@@ -309,7 +378,7 @@
 
 ; TODO Accept charmap autoindex
 ; TODO Add :LOOP :BOUNCE :STOP control values
-(defun defanimation (timeline images id &key (control :loop))
+(defun defanimation (timeline images id &key (control :LOOP))
   (unless (plusp (length timeline))
     (error "The animation (~A) needs at least one timepoint." id))
   (unless (plusp (length images))
@@ -317,7 +386,8 @@
   (let ((fixed-timeline (adjust-timeline-description timeline images)))
     (multiple-value-bind (timepoints names) (extract-timeline-components fixed-timeline)
                          (let* ((timepoints# (length timepoints))
-                                (pixmap (make-animated-pixmap-descriptor
+                                (pixmap (make-animation-descriptor
+                                          :id id
                                           :timeline (make-array (list timepoints#) :initial-contents timepoints)
                                           :names names
                                           :pixmaps (get-pixmaps-array images)
@@ -326,15 +396,15 @@
                                           :total timepoints#)))
                            (set-pixmap-descriptor id pixmap)))))
 
-(defun update-animation-frame-timepoint (animation name timepoint)
+(defun update-animation-named-timepoint (animation name new-timepoint)
   (with-slots ((names% names)
                (timeline% timeline)) animation
               (let ((entry (assoc name names%)))
                 (if entry
                     (dolist (index (cdr entry))
-                      (setf (aref timeline% index) timepoint))
+                      (setf (aref timeline% index) new-timepoint))
                     (format t "WARNING: Animation (~A) does not have a frame named (~A).~%"
-                            (pixmap-descriptor-id animation)
+                            (animation-descriptor-id animation)
                             name)))))
 
 (defun get-animation-pixmap (anixmap tick)
@@ -534,10 +604,13 @@
 
 (defstruct (sprite-descriptor (:constructor %new-sprite-descriptor))
   id
+  type
   init
   pixmap
-  transform-x
-  transform-y
+  transform-x-initial-tick
+  transform-x ;; (LAMBDA (SPRITE X TICKSTART TICKNOW TICKDIFF))
+  transform-y-initial-tick
+  transform-y ;; (LAMBDA (SPRITE Y TICKSTART TICKNOW TICKDIFF))
   (pos (make-array '(4) :initial-contents '(0 0 0 0)))
   (velocity (make-array '(4) :initial-contents '(0 0 0 0)))
   (acceleration (make-array '(4) :initial-contents '(0 0 0 0)))
@@ -568,8 +641,9 @@
 |#
     
 (defmethod print-object ((sprite sprite-descriptor) stream)
-  (format stream "[sprite-descriptor: ~A. pixmap-id: ~A. "
+  (format stream "[sprite-descriptor: ~A of ~A. pixmap-id: ~A. "
           (sprite-descriptor-id sprite)
+          (sprite-descriptor-type sprite)
           (pixmap-descriptor-id (sprite-descriptor-pixmap sprite)))
   (format stream "(~A;~A) + (~A;~A) px/s¹ + (~A;~A) px/s² + (~A;~A) px/s³]~%"
           (aref (sprite-descriptor-pos sprite) SPRITEX)
@@ -615,10 +689,11 @@
     sprite))
 |#
 
-(defun make-sprite (pixmap &key id (pos #(0 0)) (velocity #(0 0)) (acceleration #(0 0)) (jerk #(0 0)) transform-x transform-y)
+(defun make-sprite (pixmap &key id type (pos #(0 0)) (velocity #(0 0)) (acceleration #(0 0)) (jerk #(0 0)) transform-x transform-y)
   (initialize-sprite (%new-sprite-descriptor)
                      pixmap
-                     :id id 
+                     :id id
+                     :type type 
                      :pos pos 
                      :velocity velocity 
                      :acceleration acceleration 
@@ -627,7 +702,8 @@
                      :transform-y transform-y))
 
 (defun initialize-sprite (object pixmap &key 
-                                 id 
+                                 id
+                                 type 
                                  (pos #(0 0)) 
                                  (velocity #(0 0)) 
                                  (acceleration #(0 0)) 
@@ -637,6 +713,7 @@
   (check-type pixmap pixmaptype)
   (initialize-struct object
                      :id id
+                     :type type
                      :pixmap pixmap
                      :pos (make-array '(4) :initial-contents
                                       (list (elt pos 0)
@@ -661,8 +738,20 @@
                      :transform-x transform-x
                      :transform-y transform-y))
 
+(defun set-x-transformer (sprite callback)
+  (format t "-----------set-x-transformer~%")
+  (setf (sprite-descriptor-transform-x-initial-tick sprite) nil)
+  (setf (sprite-descriptor-transform-x sprite) callback))
+
+(defun set-y-transformer (sprite callback)
+  (setf (sprite-descriptor-transform-y-initial-tick sprite) nil)
+  (setf (sprite-descriptor-transform-y sprite) callback))
+
 (defun get-sprite-pixmap (sprite)
   (sprite-descriptor-pixmap sprite))
+
+(defun get-sprite-type (sprite)
+  (sprite-descriptor-type sprite))
 
 (defun change-sprite-position (sprite px py)
   (let ((pos (sprite-descriptor-pos sprite)))
@@ -742,12 +831,32 @@
   (let ((pos (sprite-descriptor-pos sprite)))
     (let ((x (aref pos SPRITEX))
           (y (aref pos SPRITEY)))
-      (let ((tx (sprite-descriptor-transform-x sprite)))
-        (when tx
-          (setf x (funcall tx sprite (- tick (aref pos TICKX))))))
-      (let ((ty (sprite-descriptor-transform-y sprite)))
-        (when ty
-          (setf y (funcall ty sprite (- tick (aref pos TICKY))))))
+      (let ((transformer (sprite-descriptor-transform-x sprite)))
+        (when transformer
+          (unless (sprite-descriptor-transform-x-initial-tick sprite)
+            (setf (sprite-descriptor-transform-x-initial-tick sprite) tick))
+          (let ((tickstart (sprite-descriptor-transform-x-initial-tick sprite))
+                (ticknow tick)
+                (tickdiff (- tick (aref pos TICKX)))
+                (saved-x x))
+            (setf x (funcall transformer sprite x tickstart ticknow tickdiff))
+            (unless x
+              (setf (sprite-descriptor-transform-x-initial-tick sprite) nil)
+              (setf (sprite-descriptor-transform-x sprite) nil)
+              (setf x saved-x)))))
+      (let ((transformer (sprite-descriptor-transform-y sprite)))
+        (when transformer
+          (unless (sprite-descriptor-transform-y-initial-tick sprite)
+            (setf (sprite-descriptor-transform-y-initial-tick sprite) tick))
+          (let ((tickstart (sprite-descriptor-transform-y-initial-tick sprite))
+                (ticknow tick)
+                (tickdiff (- tick (aref pos TICKY)))
+                (saved-y y))
+            (setf y (funcall transformer sprite y tickstart ticknow tickdiff))
+            (unless y
+              (setf (sprite-descriptor-transform-y-initial-tick sprite) nil)
+              (setf (sprite-descriptor-transform-y sprite) nil)
+              (setf y saved-y)))))
       (paint-descriptor (sprite-descriptor-pixmap sprite)
                         renderer
                         x
@@ -758,19 +867,29 @@
 
 ;;------------------------------------------------------------------------------
 
+(defun paint-pixmap (pixmap renderer x y tick)
+  (if (has-xy-transformer-p pixmap)
+      (multiple-value-bind (nx ny) (call-xy-transformer pixmap x y tick)
+                           (format t "TRANSFORM ~A;~A -> ~A;~A~%" x y nx ny)
+                           (paint-descriptor pixmap renderer nx ny tick))
+      (paint-descriptor pixmap renderer x y tick)))
+
+;;------------------------------------------------------------------------------
+
 (defgeneric paint-descriptor (descriptor renderer x y tick))
+
 (defmethod paint-descriptor ((descriptor pixmap-descriptor) renderer x y tick)
   (let ((source-rect (pixmap-descriptor-rectangle descriptor)))
     (unless source-rect
       (error "Failed to get rect for ~A~%" descriptor))
-    (paint-descriptor-with-rect descriptor renderer x y source-rect)))
+    (paint-descriptor-with-rect descriptor renderer x y source-rect tick)))
 
-(defmethod paint-descriptor ((descriptor animated-pixmap-descriptor) renderer x y tick)
+(defmethod paint-descriptor ((descriptor animation-descriptor) renderer x y tick)
   (let ((pixmap (get-animation-pixmap descriptor tick)))
     (paint-descriptor pixmap renderer x y tick)))
 
-(defun paint-descriptor-with-rect (descriptor renderer x y source-rect)
-  (let ((dest-rect (sdl2:make-rect
+(defun paint-descriptor-with-rect (descriptor renderer x y source-rect tick)
+  (let ((dest-rect (make-rect
                      x
                      y
                      (sdl2:rect-width source-rect)
@@ -780,4 +899,4 @@
       (pixmap-descriptor-texture descriptor)
       :source-rect source-rect
       :dest-rect dest-rect)
-    (sdl2:free-rect dest-rect)))
+    (free-rect dest-rect)))
