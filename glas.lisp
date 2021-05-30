@@ -1,6 +1,8 @@
 
 (in-package :glas)
 
+(defparameter *RENDERER* nil)
+
 (defun initialize-all-glas-components (width height)
   (glas-initialize-sprites)
   (format t "GLAS: Sprites initialized.~%")
@@ -23,6 +25,7 @@
                     (sdl2:with-window (win :w *WINDOW-WIDTH* :h *WINDOW-HEIGHT* :title title :flags '(:shown))
                                       (format t "SDL2 Window created.~%")
                                       (sdl2:with-renderer (renderer win)
+                                                          (setf *RENDERER* renderer)
                                                           (handler-case
                                                             (progn
                                                               (when resources#
@@ -31,6 +34,7 @@
                                                                 (funcall windows#))
                                                               (attach-debug-window)
                                                               (finalize-windows)
+                                                              (format t "Allocated SDL2:RECTs ~A~%" *RECTS*)
                                                               (gameloop renderer idle#))
                                                             (error (e)
                                                                    (format t "Caught error: ~A~%" e)
