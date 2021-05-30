@@ -11,6 +11,7 @@
     :pixmap-descriptor-id
     :pixmap-width
     :pixmap-height
+    :pixmap-id
     :defresource
     :get-pixmap
     :verify-images-existence
@@ -18,6 +19,7 @@
     :get-pixmaps-array
     :defanimation
     :restart-animation
+    :update-animation-named-timepoint
     :defcharmap
     :get-charmap
     :get-charmap-pixmap
@@ -30,7 +32,12 @@
     :set-current-iterator-key
     :paint-sprite
     :paint-descriptor
+    :paint-pixmap
+    :attach-xy-transformer
+    :has-xy-transformer-p
+    :remove-xy-transformer
     
+    ;; SPRITE-DESCRIPTOR
     :sprite-descriptor
     :make-sprite
     :get-sprite-pixmap
@@ -44,6 +51,9 @@
     :change-sprite-acceleration
     :change-sprite-jerk
     :stop-sprite
+    :set-x-transformer
+    :set-y-transformer
+    :get-sprite-type
     
     :paint-descriptor
     
