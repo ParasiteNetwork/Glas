@@ -67,41 +67,46 @@
 
 (defun gameloop (renderer idle#)        
   (format t "Entering game loop.~%")
-  (sdl2:with-event-loop (:method :poll)
-                        (:quit () t)
-                        
-                        ;; KEY
-                        (:keydown (:keysym keysym)
-                                  (format t "Key DOWN: (~A) ~A.~%"
+  (let ((timeadjust 1))
+    (when (> internal-time-units-per-second 1000)
+      (setf timeadjust (/ internal-time-units-per-second 1000)))
+    (format t "Time adjustment: ~A.~%" timeadjust)
+    (sdl2:with-event-loop (:method :poll)
+                          (:quit () t)
+                          
+                          ;; KEY
+                          (:keydown (:keysym keysym)
+                                    (format t "Key DOWN: (~A) ~A.~%"
+                                            (sdl2:scancode-value keysym)
+                                            (sdl2:scancode keysym))                                  
+                                    (window-event-onkey-down keysym))
+                          (:keyup (:keysym keysym)
+                                  (format t "Key UP: (~A) ~A.~%"
                                           (sdl2:scancode-value keysym)
                                           (sdl2:scancode keysym))                                  
-                                  (window-event-onkey-down keysym))
-                        (:keyup (:keysym keysym)
-                                (format t "Key UP: (~A) ~A.~%"
-                                        (sdl2:scancode-value keysym)
-                                        (sdl2:scancode keysym))                                  
-                                (window-event-onkey-up keysym))
-                        
-                        ;; MOUSE
-                        (:mousemotion (:timestamp timestamp :x x :y y)
-                                      (track-mouse-movement x y))
-                        (:mousebuttondown (:timestamp timestamp :state state :button button :x x :y y)
-                                          (track-mouse-button-down button x y))
-                        (:mousebuttonup (:timestamp timestamp :state state :button button :x x :y y)
-                                        (track-mouse-button-up button x y))
-                        
-                        ;; EVENTS
-                        (:windowevent (:event event :type type :timestamp timestamp :data1 data1 :data2 data2)
-                                      (format t "Window event: ~A.~%" (translate-window-event event))
-                                      (cond
-                                        ((eq event !MOUSE-LEAVE!)
-                                         (track-mouse-movement -1 -1))))
-
-                        (:idle ()
-                               (let ((tick (get-internal-real-time)))
-                                 (sdl2:set-render-draw-color renderer 255 0 60 0)
-                                 (sdl2:render-clear renderer)
-                                 (paint-all-windows renderer tick :debug-borders *debug-widget-border*)                                 
-                                 (sdl2:render-present renderer)
-                                 (when idle#
-                                   (funcall idle# renderer tick))))))
+                                  (window-event-onkey-up keysym))
+                          
+                          ;; MOUSE
+                          (:mousemotion (:timestamp timestamp :x x :y y)
+                                        (track-mouse-movement x y))
+                          (:mousebuttondown (:timestamp timestamp :state state :button button :x x :y y)
+                                            (track-mouse-button-down button x y))
+                          (:mousebuttonup (:timestamp timestamp :state state :button button :x x :y y)
+                                          (track-mouse-button-up button x y))
+                          
+                          ;; EVENTS
+                          (:windowevent (:event event :type type :timestamp timestamp :data1 data1 :data2 data2)
+                                        (format t "Window event: ~A.~%" (translate-window-event event))
+                                        (cond
+                                          ((eq event !MOUSE-LEAVE!)
+                                           (track-mouse-movement -1 -1))))
+                          
+                          (:idle ()
+                                 (let ((tick (get-internal-real-time)))
+                                   (setf tick (/ tick timeadjust))
+                                   (sdl2:set-render-draw-color renderer 255 0 60 0)
+                                   (sdl2:render-clear renderer)
+                                   (paint-all-windows renderer tick :debug-borders *debug-widget-border*)                                 
+                                   (sdl2:render-present renderer)
+                                   (when idle#
+                                     (funcall idle# renderer tick)))))))
