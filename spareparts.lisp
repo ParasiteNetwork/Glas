@@ -20,13 +20,14 @@
         (funcall writer value thestruct)))))
 
 (defmacro initialize-struct (thestruct &rest args &key &allow-other-keys)
-  (let ((name (gensym))(package (gensym)))
-    `(let ((,name (symbol-name (type-of ,thestruct)))
-           (,package (symbol-package (type-of ,thestruct))))
+  (let ((name (gensym))(package (gensym))(target (gensym)))
+    `(let* ((,target ,thestruct)
+            (,name (symbol-name (type-of ,target)))
+            (,package (symbol-package (type-of ,target))))
        (prog1
-         ,thestruct
+         ,target
          ,@(loop for (key value) on args by #'cddr
-                 collect `(initialize-struct-slot ,thestruct 
+                 collect `(initialize-struct-slot ,target 
                                                   ,package 
                                                   ,name 
                                                   ,key 
