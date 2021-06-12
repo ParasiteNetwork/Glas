@@ -21,21 +21,46 @@
 
 ;;----------------------------------------------------------------------
 
+(defstruct surface-descriptor
+  sdlsurface
+  width
+  height)
+
+(defun get-surface-from-file (path)
+  (let ((surface (sdl2-image:load-image path)))
+    (unless surface
+      (error "Failed to create surface for file: ~A." path))
+    (make-surface-descriptor
+      :sdlsurface surface
+      :width (sdl2:surface-width surface)
+      :height (sdl2:surface-height surface))))
+
+(defparameter *SURFACES* (make-hash-table :test #'equal))
+
+(defun get-surface (path)
+  (let ((existing (gethash path *SURFACES*)))
+    (if existing
+        existing
+        (let ((surface (get-surface-from-file path)))
+          (setf (gethash path *SURFACES*) surface)))))
+
+;;----------------------------------------------------------------------
+
 (defstruct texture-descriptor 
   texture
   width
   height)
 
 (defun create-texture-from-file (path renderer)
-  (let ((surface (sdl2-image:load-image path)))
+  (let ((surface (get-surface path)))
     (unless surface
       (error "Failed to create surface for file: ~A." path))
-    (let ((width (sdl2:surface-width surface))
-          (height (sdl2:surface-height surface)))
-      (let ((texture (sdl2:create-texture-from-surface renderer surface)))
+    (let ((width (surface-descriptor-width surface))
+          (height (surface-descriptor-height surface)))
+      (let ((texture (sdl2:create-texture-from-surface renderer (surface-descriptor-sdlsurface surface))))
         (unless texture
           (error "Failed to create texture for surface: ~A" path))
-        (sdl2:free-surface surface)
+        ;(sdl2:free-surface surface)
         (make-texture-descriptor
           :texture texture
           :width width
