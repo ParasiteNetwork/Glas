@@ -2,6 +2,8 @@
   (:use :cl)
   (:lock t)
   (:export
+  	:milliseconds
+  
     ;; SPAREPARTS.LISP
     :keycase
     :initialize-struct

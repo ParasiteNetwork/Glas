@@ -821,37 +821,42 @@
   (change-sprite-jerk sprite 0 0))
 
 (defun update-movement (sprite tick)
-  (dolist (s (list SPRITEX SPRITEY))
+  (dolist (xy (list SPRITEX SPRITEY))
     (update-dependency
       (sprite-descriptor-acceleration sprite)
       (sprite-descriptor-jerk sprite)
-      s
+      xy
       tick)
     (update-dependency
       (sprite-descriptor-velocity sprite)
       (sprite-descriptor-acceleration sprite)
-      s
+      xy
       tick)
     (update-dependency
       (sprite-descriptor-pos sprite)
       (sprite-descriptor-velocity sprite)
-      s
+      xy
       tick)))
 
-(defun update-dependency (dependant depender s tick)
-  (let ((xtick (+ 1 s)))
+(defun update-dependency (dependant depender xy tick)
+  (let ((xtick (+ 1 xy)))
     (if (zerop (aref depender xtick))
         (setf (aref depender xtick) tick)
-        (let ((v (aref depender s)))
+        (let ((v (aref depender xy)))
           (when v
             (let* ((diff (- tick (aref depender xtick)))
                    (frac (/ diff (float INTERNAL-TIME-UNITS-PER-SECOND)))
                    (Δv (truncate (* frac v))))
+              ;(format t "tick = ~A~%" tick)
+              ;(format t "diff = ~A~%" diff)
+              ;(format t "frac = ~A~%" frac)
+              ;(format t "Δv = ~A~%" Δv)   
               (when (not (= Δv 0))
-                (incf (aref dependant s) Δv)
+                (incf (aref dependant xy) Δv)
                 (setf (aref depender xtick) tick))))))))
 
 (defun paint-sprite (sprite renderer tick)
+	;(format t "*** paint-sprite~%")
   (update-movement sprite tick)
   (let ((pos (sprite-descriptor-pos sprite)))
     (let ((x (aref pos SPRITEX))

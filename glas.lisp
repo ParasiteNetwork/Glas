@@ -3,6 +3,9 @@
 
 (defparameter *RENDERER* nil)
 
+(defun milliseconds (ms)
+	(* ms (/ INTERNAL-TIME-UNITS-PER-SECOND 1000.0)))
+
 (defun initialize-all-glas-components (width height)
   (glas-initialize-sprites)
   (format t "GLAS: Sprites initialized.~%")
@@ -103,7 +106,6 @@
                           
                           (:idle ()
                                  (let ((tick (get-internal-real-time)))
-                                   (setf tick (/ tick timeadjust))
                                    (sdl2:set-render-draw-color renderer 255 0 60 0)
                                    (sdl2:render-clear renderer)
                                    (paint-all-windows renderer tick :debug-borders *debug-widget-border*)                                 
